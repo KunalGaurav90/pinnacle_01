@@ -1,0 +1,229 @@
+# 1. Install the required library
+!pip install googletrans==4.0.0-rc1
+
+# 2. Import necessary libraries
+import ipywidgets as widgets
+from IPython.display import display, HTML
+from googletrans import Translator, LANGUAGES
+
+# 3. Define the CSS for the UI
+# This CSS combines the solid style with styles for functional dropdowns.
+
+css_style = """
+<style>
+/* --- Overall Background --- */
+.body {
+    background-color: #1a1a2e;
+}
+
+/* --- Main container --- */
+.translator-ui {
+    background-color: #1a1a2e; /* Light blue-ish background */
+    padding: 25px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* --- General box styling (solid color) --- */
+.lang-box {
+    background: #2c2c3e; /* Solid dark pink/grey color */
+    border: 1px solid #4a4a68;
+    border-radius: 16px;
+    padding: 20px;
+    width: 300px;
+    height: 280px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Specific glow colors for each box --- */
+.left-box {
+    box-shadow: 0 5px 25px rgba(138, 43, 226, 0.5); /* Pink glow */
+}
+.middle-box {
+    box-shadow: 0 5px 25px rgba(70, 70, 110, 0.4); /* Faint neutral glow */
+    justify-content: center; /* Center the button vertically */
+}
+.right-box {
+    box-shadow: 0 5px 25px rgba(0, 207, 255, 0.5); /* Cyan glow */
+}
+
+/* --- Language Selector (Dropdown) Styling --- */
+.lang-selector .widget-label {
+    display: none; /* Hide the default 'From:' and 'To:' text */
+}
+.lang-selector select {
+    background: transparent !important;
+    border: none !important;
+    color: red !important;
+    font-weight: bold !important;
+    font-size: 16px !important;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 15px;
+    width: 100%;
+}
+/* Style for the options within the dropdown */
+.lang-selector option {
+    background: #2c2c3e !important;
+    color: white !important;
+    font-weight: normal;
+}
+
+
+/* --- Source Text Area (Left Side) --- */
+.source-text-area {
+    background-color: white !important;
+    color: black !important;
+    border: 2px solid #4a90e2 !important; /* Blue border */
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    flex-grow: 1;
+    resize: none !important;
+}
+
+/* --- Target Text Area (Right Side) --- */
+.target-text-area {
+    background-color: #d3d3d3 !important; /* Light grey background */
+    color: black !important;
+    border: 1px solid #777 !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    flex-grow: 1;
+    resize: none !important;
+}
+
+/* --- Button Styling --- */
+.middle-box .widget-button {
+    background: #3b82f6; /* Solid blue */
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 25px; /* Pill shape */
+}
+
+/* --- Decorative Slider Styling --- */
+.slider-container {
+    padding: 0 10px;
+    margin-top: auto; /* Push to the bottom */
+}
+.slider-track {
+    width: 100%;
+    height: 4px;
+    background-color: rgba(0, 207, 255, 0.4);
+    border-radius: 2px;
+    position: relative;
+}
+.slider-thumb {
+    width: 16px;
+    height: 16px;
+    background-color: #00cfff;
+    border-radius: 50%;
+    position: absolute;
+    top: -6px; /* Center it on the track */
+    left: 60%;
+    box-shadow: 0 0 8px #00cfff;
+}
+</style>
+"""
+
+# 4. Set up the translator and language options
+translator = Translator()
+# Reformat language names for the dropdown (e.g., "ENGLISH (EN)")
+lang_options = [f"{LANGUAGES[code].upper()} ({code.upper()})" for code in LANGUAGES]
+# Create a reverse lookup dictionary
+lang_code_map = {f"{LANGUAGES[code].upper()} ({code.upper()})": code for code in LANGUAGES}
+
+
+# 5. Create the UI Widgets with restored functionality
+# --- Left side (Input) ---
+source_lang_dropdown = widgets.Dropdown(
+    options=lang_options,
+    value="ENGLISH (EN)",
+)
+source_lang_dropdown.add_class("lang-selector")
+input_text_area = widgets.Textarea(
+    value='Hello',
+    layout=widgets.Layout(width='100%', height='100%')
+)
+input_text_area.add_class("source-text-area")
+
+# --- Middle (Button) ---
+translate_button = widgets.Button(
+    description="Translate",
+    layout=widgets.Layout(width='150px', height='50px')
+)
+
+# --- Right side (Output) ---
+target_lang_dropdown = widgets.Dropdown(
+    options=lang_options,
+    value="SPANISH (ES)",
+)
+target_lang_dropdown.add_class("lang-selector")
+output_text_area = widgets.Textarea(
+    placeholder='Translation',
+    disabled=True,
+    layout=widgets.Layout(width='100%', height='100%')
+)
+output_text_area.add_class("target-text-area")
+
+# Create the decorative slider
+fake_slider = widgets.HTML(
+    value='<div class="slider-container"><div class="slider-track"><div class="slider-thumb"></div></div></div>'
+)
+
+# 6. Define the function to perform translation
+def perform_translation(b=None):
+    text_to_translate = input_text_area.value.strip()
+    if not text_to_translate:
+        output_text_area.value = ""
+        return
+
+    # Get language codes from the dropdowns
+    source_code = lang_code_map[source_lang_dropdown.value]
+    dest_code = lang_code_map[target_lang_dropdown.value]
+
+    try:
+        translated_result = translator.translate(
+            text_to_translate,
+            src=source_code,
+            dest=dest_code
+        )
+        output_text_area.value = translated_result.text
+    except Exception as e:
+        output_text_area.value = f"Error: {e}"
+
+# 7. Link functions to widget events
+translate_button.on_click(perform_translation)
+# Re-trigger translation if the language is changed
+source_lang_dropdown.observe(perform_translation, names='value')
+target_lang_dropdown.observe(perform_translation, names='value')
+
+# 8. Arrange widgets into a layout and apply CSS classes
+left_box = widgets.VBox([source_lang_dropdown, input_text_area])
+left_box.add_class("lang-box")
+left_box.add_class("left-box")
+
+middle_box = widgets.VBox([translate_button], layout=widgets.Layout(align_items='center'))
+middle_box.add_class("lang-box")
+middle_box.add_class("middle-box")
+
+right_box = widgets.VBox([target_lang_dropdown, output_text_area, fake_slider])
+right_box.add_class("lang-box")
+right_box.add_class("right-box")
+
+# Create the main UI container
+ui = widgets.HBox([left_box, middle_box, right_box])
+ui.add_class("translator-ui")
+
+# 9. Display the UI
+# First, display the CSS, then display the widget layout.
+# Finally, call the translation function once to populate the initial state.
+display(HTML(css_style))
+display(ui)
+perform_translation()
